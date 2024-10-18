@@ -1,0 +1,8 @@
+M_id,M_name,C_in,C_in_name,C_out,C_out_name
+M_1,L-Methionine_S-Adenosyl-L-methionine,C00073,L-Methionine,C00019,S-Adenosyl-L-methionine
+M_2,S-Adenosyl-L-methionine_L-Methionine,C00019,S-Adenosyl-L-methionine,C00073,L-Methionine
+M_3,S-Adenosyl-L-methionine_L-Homocysteine,C00019,S-Adenosyl-L-methionine,C00155,L-Homocysteine
+M_4,"L-Homocysteine+5,10-Methylenetetrahydrofolate_L-Methionine+Tetrahydrofolate",C00155+C00143,"L-Homocysteine+5,10-Methylenetetrahydrofolate",C00073+C00101,L-Methionine+Tetrahydrofolate
+M_5,"Folate+Tetrahydrofolate_5,10-Methylenetetrahydrofolate",C00504+C00101,Folate+Tetrahydrofolate,C00143,"5,10-Methylenetetrahydrofolate"
+M_6,"5,10-Methylenetetrahydrofolate_Folate+Thymidine",C00143,"5,10-Methylenetetrahydrofolate",C00214+C00101,Folate+Thymidine
+M_7,L-Homocysteine_Glutathione,C00155,L-Homocysteine,C00051,Glutathione

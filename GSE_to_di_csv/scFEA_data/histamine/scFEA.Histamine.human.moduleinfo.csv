@@ -1,0 +1,7 @@
+"M_id","M_name","C_in","C_in_name","C_out","C_out_name"
+"M_1","IN_Histidine","CC00001","IN","C00135","Histidine"
+"M_2","Histidine_Carnosine","C00135","Histidine","C00386","Carnosine"
+"M_3","Carnosine_Histidine","C00386","Carnosine","C00135","Histidine"
+"M_4","Histidine_OUT","C00135","Histidine","CC00000","OUT"
+"M_5","Histidine_Histamine","C00135","Histidine","C00388","Histamine"
+"M_6","Histamine_OUT","C00388","Histamine","CC00000","OUT"

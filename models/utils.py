@@ -1,8 +1,11 @@
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
+import os
+import datetime
+import torch.nn as nn
 
-
-def context_target_split(x, y, num_context, num_extra_target, locations = None, use_y0=True):
+def context_target_split(x, y, num_context, num_extra_target, locations = None, use_y0=True, ordered_time=False):
 	"""Given inputs x and their value y, return random subsets of points for
 	context and target. Note that following conventions from "Empirical
 	Evaluation of Neural Process Objectives" the context points are chosen as a
@@ -23,7 +26,6 @@ def context_target_split(x, y, num_context, num_extra_target, locations = None, 
 		Number of additional target points.
 	"""
 	num_points = x.shape[1]
-
 	# Sample locations of context and target points
 	if locations is None:
 		points = np.arange(num_points)
@@ -34,15 +36,79 @@ def context_target_split(x, y, num_context, num_extra_target, locations = None, 
 			points = points[1:]
 			size -= 1
 			initial_loc = np.array([0])
-
-		locations = np.random.choice(points, size=size, replace=False)
+		# import pdb; pdb.set_trace()
+		
+		# [santanu]: this is the culprit for the unordered-ness of things
+		if not ordered_time:
+			locations = np.random.choice(points, size=size, replace=False)
+		elif ordered_time:
+			locations = points[:size]
+			# locations= np.random.choice(points[:size], size=size, replace=False)
+			
 		locations = np.concatenate([initial_loc, locations])
+	
+	if not isinstance(locations, torch.Tensor):
+		locations = torch.tensor(locations, device=x.device)
 
-	x_context = x[:, locations[:num_context], :]
-	y_context = y[:, locations[:num_context], :]
-	x_target = x[:, locations, :]
-	y_target = y[:, locations, :]
-	return x_context, y_context, x_target, y_target, y[:, 0, :]
+	# Use tensor indexing for efficient slicing
+	context_indices = locations[:num_context]
+	target_indices = locations
+	# import pdb; pdb.set_trace()
+	x_context = x.index_select(1, context_indices)
+	y_context = y.index_select(1, context_indices)
+	x_target = x.index_select(1, target_indices)
+	y_target = y.index_select(1, target_indices)
+	y0 = y[:, 0, :]
+
+	# import pdb; pdb.set_trace()
+	return x_context, y_context, x_target, y_target, y0
+
+	# import pdb; pdb.set_trace()
+	# x_context = x[:, locations[:num_context], :]
+	# y_context = y[:, locations[:num_context], :]
+	# x_target = x[:, locations, :]
+	# y_target = y[:, locations, :]
+	# # import pdb; pdb.set_trace()
+	# return x_context, y_context, x_target, y_target, y[:, 0, :]
+
+	# debug trial
+	# print("Locations shape:", locations.shape)
+	# print("x shape:", x.shape)
+	# print("y shape:", y.shape)
+	# print("num_context:", num_context)
+
+	# # Ensure locations is a tensor on the same device as x and y
+	# if not isinstance(locations, torch.Tensor):
+	# 	locations = torch.tensor(locations, device=x.device)
+
+	# # Check if locations are within bounds
+	# if locations.max() >= x.shape[1] or locations.min() < 0:
+	# 	raise ValueError(f"Locations out of bounds. Max location: {locations.max()}, x shape: {x.shape}")
+
+	# # Safeguard against num_context being larger than available locations
+	# num_context = min(num_context, len(locations))
+
+	# try:
+	# 	x_context = x[:, locations[:num_context], :]
+	# 	print("x_context shape:", x_context.shape)
+
+	# 	import pdb; pdb.set_trace()
+	
+	# 	y_context = y[:, locations[:num_context], :]
+	# 	print("y_context shape:", y_context.shape)
+
+	# 	x_target = x[:, locations, :]
+	# 	print("x_target shape:", x_target.shape)
+
+	# 	y_target = y[:, locations, :]
+	# 	print("y_target shape:", y_target.shape)
+
+	# except Exception as e:
+	# 	print(f"Error occurred: {str(e)}")
+	# 	print(f"locations[:num_context]: {locations[:num_context]}")
+	# 	raise
+
+	# return x_context, y_context, x_target, y_target, y[:, 0, :]
 
 
 def img_mask_to_np_input(img, mask, normalize=True):
@@ -242,3 +308,179 @@ def inpaint(model, img, context_mask, device):
 	# Reset model to mode it was in before inpainting
 	model.neural_process.training = is_training
 	return img_rec
+
+
+def create_plots_directory(base_dir='plots', exp_name= 'base'):
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    plots_dir = os.path.join(base_dir, exp_name+':'+timestamp)
+    if not os.path.exists(plots_dir):
+        os.makedirs(plots_dir)
+    return plots_dir
+
+# def visualize_gene_expression_histograms(y, p_y_pred, considered_genes, epoch=0, base_save_dir='plots', bins=np.linspace(0, 10, 100), time_points=None):
+#     # Ensure y and p_y_pred are on the CPU and detached from the computational graph
+#     y = y.cpu().detach().numpy()
+#     p_y_sample = p_y_pred.sample().cpu().detach().numpy()
+
+#     if time_points is None:
+#         time_points = list(range(y.shape[1]))  # Default to all time points if none specified
+
+#     num_time_points = len(time_points)
+#     num_genes = y.shape[2]
+
+#     epoch_save_dir = os.path.join(base_save_dir, f'epoch_{epoch}')
+#     if not os.path.exists(epoch_save_dir):
+#         os.makedirs(epoch_save_dir)
+
+#     for g in considered_genes:
+#         if g >= num_genes:
+#             print(f"Gene index {g} is out of bounds for the number of genes {num_genes}")
+#             continue
+        
+#         # Collect all gene expression values for the gene across specified time points
+#         all_actual_exps = [y[:, t, g] for t in time_points]
+#         all_pred_exps = [p_y_sample[:, t, g] for t in time_points]
+        
+#         # Calculate the bin width and offsets for the bars
+#         bin_width = 0.8
+#         bar_width = bin_width / (2 * num_time_points)  # Adjust for two sets: actual and predicted
+#         offsets = np.linspace(-bar_width * (num_time_points - 1), bar_width * (num_time_points - 1), num_time_points)
+
+#         plt.figure(figsize=(10, 6))
+
+#         for j, t in enumerate(time_points):
+#             actual_counts, _ = np.histogram(all_actual_exps[j], bins=bins, density=True)
+#             pred_counts, _ = np.histogram(all_pred_exps[j], bins=bins, density=True)
+#             bin_centers = 0.5 * (bins[:-1] + bins[1:])
+            
+#             plt.bar(bin_centers + offsets[j], actual_counts, width=bar_width, label=f'Actual t{t}', alpha=0.5)
+#             plt.bar(bin_centers + offsets[j] + bar_width, pred_counts, width=bar_width, label=f'Predicted t{t}', alpha=0.5)
+
+#         plt.title(f'Gene Expression Distribution for Gene {g} at Epoch {epoch}')
+#         plt.legend(loc='upper right')
+#         plt.xlabel('Value')
+#         plt.ylabel('Density')
+#         plt.savefig(os.path.join(epoch_save_dir, f'gene_{g}_epoch_{epoch}.png'))
+#         plt.close()
+
+def visualize_gene_expression_histograms(y, p_y_pred, considered_genes, data_type, epoch=0, base_save_dir='plots', bins=np.linspace(0, 10, 100), time_points=None):
+    """
+	script was written for gene-expression originally, slowly generalizing it
+	"""
+	# Ensure y and p_y_pred are on the CPU and detached from the computational graph
+    y = y.cpu().detach().numpy()
+    p_y_sample = p_y_pred.sample().cpu().detach().numpy()
+
+    # import pdb; pdb.set_trace()
+
+    if time_points is None:
+        time_points = list(range(y.shape[1]))  # Default to all time points if none specified
+
+    num_time_points = len(time_points)
+    num_genes = y.shape[2]
+
+    epoch_save_dir = os.path.join(base_save_dir, f'epoch_{epoch}')
+    if not os.path.exists(epoch_save_dir):
+        os.makedirs(epoch_save_dir)
+
+    for g in considered_genes:
+        if g >= num_genes:
+            print(f"Index {g} is out of bounds for the number of genes {num_genes}")
+            continue
+        
+        # Create subplots for each time point
+        fig, axes = plt.subplots(num_time_points, 2, figsize=(15, 5 * num_time_points))
+        
+        for j, t in enumerate(time_points):
+            ax_actual, ax_pred = axes[j] if num_time_points > 1 else (axes, axes)
+
+            actual_exps = y[:, t, g]
+            pred_exps = p_y_sample[:, t, g]
+
+            # Histogram and line plot for actual gene expression values
+            actual_counts, bins_actual, _ = ax_actual.hist(actual_exps, bins=bins, density=True, alpha=0.5, label='Actual')
+            bin_centers_actual = 0.5 * (bins_actual[:-1] + bins_actual[1:])
+            ax_actual.plot(bin_centers_actual, actual_counts, 'r-', label='Actual Line')
+            ax_actual.set_title(f'Actual {data_type} at t{t}')
+            ax_actual.set_xlabel('Value')
+            ax_actual.set_ylabel('Density')
+            ax_actual.legend()
+
+            # Histogram and line plot for predicted gene expression values
+            pred_counts, bins_pred, _ = ax_pred.hist(pred_exps, bins=bins, density=True, alpha=0.5, label='Predicted')
+            bin_centers_pred = 0.5 * (bins_pred[:-1] + bins_pred[1:])
+            ax_pred.plot(bin_centers_pred, pred_counts, 'b-', label='Predicted Line')
+            ax_pred.set_title(f'Predicted {data_type} at t{t}')
+            ax_pred.set_xlabel('Value')
+            ax_pred.set_ylabel('Density')
+            ax_pred.legend()
+
+        fig.suptitle(f'{data_type} Distribution for x {g} at Epoch {epoch}')
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        plt.savefig(os.path.join(epoch_save_dir, f'x_{g}_epoch_{epoch}.png'))
+        plt.close()
+
+
+def init_network_weights(net, std = 0.1):
+	for m in net.modules():
+		if isinstance(m, nn.Linear):
+			nn.init.normal_(m.weight, mean=0, std=std)
+			nn.init.constant_(m.bias, val=0)
+
+
+def create_net(n_inputs, n_outputs, n_layers = 1, 
+	n_units = 100, nonlinear = nn.Tanh):
+	layers = [nn.Linear(n_inputs, n_units)]
+	for i in range(n_layers):
+		layers.append(nonlinear())
+		layers.append(nn.Linear(n_units, n_units))
+
+	layers.append(nonlinear())
+	layers.append(nn.Linear(n_units, n_outputs))
+	return nn.Sequential(*layers)
+
+def get_device(tensor):
+	device = torch.device("cpu")
+	if tensor.is_cuda:
+		device = tensor.get_device()
+	return device
+
+
+def split_last_dim(data):
+	last_dim = data.size()[-1]
+	last_dim = last_dim//2
+
+	if len(data.size()) == 3:
+		res = data[:,:,:last_dim], data[:,:,last_dim:]
+
+	if len(data.size()) == 2:
+		res = data[:,:last_dim], data[:,last_dim:]
+	return res
+
+def check_mask(data, mask):
+	#check that "mask" argument indeed contains a mask for data
+	n_zeros = torch.sum(mask == 0.).cpu().numpy()
+	n_ones = torch.sum(mask == 1.).cpu().numpy()
+
+	# mask should contain only zeros and ones
+	assert((n_zeros + n_ones) == np.prod(list(mask.size())))
+
+	# all masked out elements should be zeros
+	assert(torch.sum(data[mask == 0.] != 0.) == 0)
+
+def linspace_vector(start, end, n_points):
+	# start is either one value or a vector
+	size = np.prod(start.size())
+
+	assert(start.size() == end.size())
+	if size == 1:
+		# start and end are 1d-tensors
+		res = torch.linspace(start, end, n_points)
+	else:
+		# start and end are vectors
+		res = torch.Tensor()
+		for i in range(0, start.size(0)):
+			res = torch.cat((res, 
+				torch.linspace(start[i], end[i], n_points)),0)
+		res = torch.t(res.reshape(start.size(0), n_points))
+	return res

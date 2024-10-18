@@ -1,0 +1,16 @@
+M_id,M_name,C_in,C_in_name,C_out,C_out_name,SM_id
+M_1,Glucose_G6P,Glucose,C00267,G6P,C00668,1
+M_2,G6P_G3P,G6P,C00668,G3P,C00118,1
+M_3,G3P_3PD,G3P,C00118,3PD,C00197,1
+M_4,3PD_Pyruvate,3PD,C00197,Pyruvate,C00022,1
+M_5,Pyruvate_Acetyl-Coa,Pyruvate,C00022,Acetyl-Coa,C00024,2
+M_6,Pyruvate_Lactate,Pyruvate,C00022,Lactate,C00186,3
+M_7,Acetyl-CoA+Oxaloacetate_Citrate,Acetyl-CoA+Oxaloacetate,C00024+C00036,Citrate,C00158,2
+M_8,Citrate_2OG,Citrate,C00158,2OG,C00026,2
+M_9,2OG_Succinyl-CoA,2OG,C00026,Succinyl-CoA,C00091,4
+M_10,Succinyl-CoA_Succinate,Succinyl-CoA,C00091,Succinate,C00042,4
+M_11,Succinate_Fumarate,Succinate,C00042,Fumarate,C00122,4
+M_12,Fumarate_Malate,Fumarate,C00122,Malate,C00149,4
+M_13,Malate_Oxaloacetate,Malate,C00149,Oxaloacetate,C00036,4
+M_14,3PD_Serine,3PD,C00197,Serine,C00065,1
+M_15,G3P_PRPP,G3P,C00118,PRPP,C00119,1

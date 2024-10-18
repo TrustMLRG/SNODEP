@@ -1,6 +1,9 @@
 datasets/*.hkl
 datasets/mnist
+data
+GSE_to_di_csv/GEO_files/
 
+scFEA_repo/knockout_data_multiple_genes/
 .ipynb_checkpoints/
 
 __pycache__/

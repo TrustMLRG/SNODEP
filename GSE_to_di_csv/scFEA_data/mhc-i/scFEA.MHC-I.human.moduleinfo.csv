@@ -1,0 +1,10 @@
+M_id,M_name,C_in,C_in_name,C_out,C_out_name,SM_id
+M_1,E1_E2_E3,Self-protein,C00002_,Peptide1,C00003_,1
+M_2,DEUB,Peptide1,C00003_,Protein,C00005_,1
+M_3,26S PROTEASOME,Peptide1,C00003_,Peptide2,C00004_,1
+M_4,MHC1,abchain,C00009_,MHC1,C00010_,2
+M_5,PLC,Peptide2+MHC1,C00004_+C00010_,Peptide MHC1 Complex1,C00011_,3
+M_6,ER_TO_GOLGI,Peptide MHC1 Complex1,C00011_,Peptide MHC1 Complex2,C00012_,4
+M_7,GOLGI_TO_SURFACE,Peptide MHC1 Complex2,C00012_,Peptide MHC1 Complex3,C00013_,4
+M_8,RECYCLE,Peptide MHC1 Complex3,C00013_,Recycle product,C00014_,4
+M_9,T_cell,Peptide MHC1 Complex3,C00013_,T_cell,C00015_,4

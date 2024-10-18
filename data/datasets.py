@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import hickle as hkl
+import random
 
 from math import pi
 from torch.utils.data import Dataset
@@ -14,6 +15,12 @@ from torch.nn.utils.rnn import pad_sequence
 from tqdm import tqdm
 from scipy.integrate import odeint
 from scipy import ndimage
+
+
+# Set random seeds for reproducibility
+random.seed(42)
+np.random.seed(42)
+torch.manual_seed(42)
 
 
 class LinearData(Dataset):
@@ -578,6 +585,8 @@ class DeterministicLotkaVolteraData(Dataset):
 
             self.data.append((times, states))
 
+        import pdb; pdb.set_trace()
+
         self.num_samples -= removed
 
     def generate_ts(self):
@@ -607,9 +616,6 @@ class DeterministicLotkaVolteraData(Dataset):
 
     def __len__(self):
         return self.num_samples
-
-
-
 
 class RotNISTDataset(Dataset):
     '''
@@ -663,3 +669,457 @@ class BouncingBallDataset(Dataset):
 
     def __len__(self):
         return len(self.data)
+
+
+
+
+
+###########################################################################################################################################
+
+
+class Flux(Dataset):
+    """
+    num_samples : int
+        Number of samples of the function contained in dataset.
+    """
+    def __init__(self, num_samples=1000, data_dir='/Users/rssantanu/Desktop/codebase/scFEA/extracted_flux_data/m171/flux', num_genes=100):
+
+        self.num_samples = num_samples
+        self.data_dir = data_dir
+        self.num_genes= num_genes
+        # import pdb; pdb.set_trace()
+        # Read CSV files
+        self.time_points = []
+        for i in range(16):
+            file_path = os.path.join(self.data_dir, f'd{i}.csv')
+            df = pd.read_csv(file_path, index_col=0)
+
+            # Remove the last num_genes rows
+            df = df.iloc[:-self.num_genes]
+            self.time_points.append(df)
+        
+        # Generate data
+        self.data = []
+        print("Creating dataset...", flush=True)
+
+        for _ in tqdm(range(num_samples)):
+            times, states = self.sample_expression()
+
+            # Normalize times 
+            times = torch.FloatTensor(times) / 10
+            times = times.unsqueeze(1)
+
+            states = torch.FloatTensor(states)
+            self.data.append((times, states))
+
+        # import pdb; pdb.set_trace()
+
+    def sample_expression(self):
+        times = []
+        states = []
+
+        for t, df in enumerate(self.time_points):
+            # Sample a random column (cell sample)
+            sampled_cell = df.sample(axis=1).values.squeeze()
+            times.append(t)
+            states.append(sampled_cell)
+
+        return times, states
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return self.num_samples
+
+
+class Flux_Knockout(Dataset):
+    """
+    num_samples : int
+        Number of samples of the function contained in the dataset.
+    data_dir : str
+        Directory containing the data files.
+    gene_list : list
+        List of gene folders to include in the dataset.
+    """
+    def __init__(self, num_samples=1000, data_dir='/Users/rssantanu/Desktop/codebase/scFEA/m171_knockout/knockout_simplified/', gene_list=None, num_genes=100):
+        self.num_samples = num_samples
+        self.data_dir = data_dir
+        self.num_genes= num_genes
+        # Read CSV files
+        self.clubbed_data = []
+        for gene in gene_list:
+            gene_data = []
+            for i in range(16):
+                file_path = os.path.join(self.data_dir, gene, 'flux', f'd{i}.csv')
+                df = pd.read_csv(file_path, index_col=0)
+                # Remove the last num_genes rows
+                df = df.iloc[:-self.num_genes]
+
+                gene_data.append(df)
+            self.clubbed_data.append(gene_data)
+        
+        # Generate data
+        self.data = []
+        print("Creating dataset...", flush=True)
+
+        for _ in tqdm(range(num_samples)):
+            times, states = self.sample_expression()
+
+            # Normalize times 
+            times = torch.FloatTensor(times) / 10
+            times = times.unsqueeze(1)
+
+            states = torch.FloatTensor(states)
+            self.data.append((times, states))
+
+    def sample_expression(self):
+        times = []
+        states = []
+
+        considered_gene_dfs= random.choice(self.clubbed_data)
+
+        for t, df in enumerate(considered_gene_dfs):
+            # Sample a random column (cell sample)
+            sampled_cell = df.sample(axis=1).values.squeeze()
+            times.append(t)
+            states.append(sampled_cell)
+        return times, states
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return self.num_samples
+    
+class Flux_Knockout_Gene_Added(Dataset):
+    """
+    num_samples : int
+        Number of samples of the function contained in the dataset.
+    data_dir : str
+        Directory containing the data files.
+    gene_list : list
+        List of gene folders to include in the dataset.
+    """
+    def __init__(self, num_samples=1000, data_dir='/Users/rssantanu/Desktop/codebase/scFEA/m171_knockout/knockout_simplified/', gene_list=None, num_genes=100):
+        self.num_samples = num_samples
+        self.data_dir = data_dir
+        self.num_genes= num_genes
+
+        # Read CSV files
+        self.clubbed_data = []
+        for gene in gene_list:
+            gene_data = []
+            for i in range(16):
+                file_path = os.path.join(self.data_dir, gene, 'flux', f'd{i}.csv')
+                df = pd.read_csv(file_path, index_col=0)
+                gene_data.append(df)
+            self.clubbed_data.append(gene_data)
+        
+        # Generate data
+        self.data = []
+        print("Creating dataset...", flush=True)
+
+        for _ in tqdm(range(num_samples)):
+            times, states = self.sample_expression()
+
+            # Normalize times 
+            times = torch.FloatTensor(times) / 10
+            times = times.unsqueeze(1)
+
+            states = torch.FloatTensor(states)
+            self.data.append((times, states))
+
+    def sample_expression(self):
+        times = []
+        states = []
+
+        considered_gene_dfs= random.choice(self.clubbed_data)
+
+        for t, df in enumerate(considered_gene_dfs):
+            # Sample a random column (cell sample)
+            sampled_cell = df.sample(axis=1).values.squeeze()
+            times.append(t)
+            states.append(sampled_cell)
+        return times, states
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return self.num_samples
+
+
+
+
+"""
+so self.data is a list containing self.num_samples elements
+and each element is a tuple (torch.array[1,2,3,..,T], torch.array[[1,2], [3,4], [5,6], ..., "T such pairs"])
+"""
+
+
+class Gene_Expression(Dataset):
+    """
+    num_samples : int
+        Number of samples of the function contained in dataset.
+    """
+    def __init__(self, num_samples=1000, data_dir='/Users/rssantanu/Desktop/codebase/neural_process/data/datasets/gene_timeseries/pluripotent_stem_cells'):
+
+        self.num_samples = num_samples
+        self.data_dir = data_dir
+        self.time_points = []
+        for i in range(16):
+            file_path = os.path.join(self.data_dir, f'd{i}.csv')
+            df = pd.read_csv(file_path, index_col=0)
+            self.time_points.append(df)
+        
+        # Generate data
+        self.data = []
+        print("Creating dataset...", flush=True)
+
+        for _ in tqdm(range(num_samples)):
+            times, states = self.sample_expression()
+
+            # Normalize times 
+            times = torch.FloatTensor(times) / 10
+            times = times.unsqueeze(1)
+
+            states = torch.FloatTensor(states)
+            self.data.append((times, states))
+
+        # import pdb; pdb.set_trace()
+
+    def sample_expression(self):
+        times = []
+        states = []
+
+        for t, df in enumerate(self.time_points):
+            # Sample a random column (cell sample)
+            sampled_cell = df.sample(axis=1).values.squeeze()
+            times.append(t)
+            states.append(sampled_cell)
+
+        return times, states
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return self.num_samples
+    
+
+class Metabolites(Dataset):
+    """
+    num_samples : int
+        Number of samples of the function contained in dataset.
+    """
+    def __init__(self, num_samples=1000, data_dir='/Users/rssantanu/Desktop/codebase/scFEA/extracted_flux_data/m171/metabolites', num_genes=100):
+
+        self.num_samples = num_samples
+        self.data_dir = data_dir
+        self.num_genes= num_genes
+        # Read CSV files
+        self.time_points = []
+        for i in range(16):
+            file_path = os.path.join(self.data_dir, f'd{i}.csv')
+            df = pd.read_csv(file_path, index_col=0)
+            df = df.iloc[:-self.num_genes]
+            self.time_points.append(df)
+        
+        # Generate data
+        self.data = []
+        print("Creating dataset...", flush=True)
+
+        for _ in tqdm(range(num_samples)):
+            times, states = self.sample_expression()
+
+            # Normalize times 
+            times = torch.FloatTensor(times) / 10
+            times = times.unsqueeze(1)
+
+            states = torch.FloatTensor(states)
+            self.data.append((times, states))
+
+    def sample_expression(self):
+        times = []
+        states = []
+
+        for t, df in enumerate(self.time_points):
+            # Sample a random column (cell sample)
+            sampled_cell = df.sample(axis=1).values.squeeze()
+            times.append(t)
+            states.append(sampled_cell)
+
+        return times, states
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return self.num_samples
+
+
+class Metabolites_Knockout(Dataset):
+    """
+    num_samples : int
+        Number of samples of the function contained in the dataset.
+    data_dir : str
+        Directory containing the data files.
+    gene_list : list
+        List of gene folders to include in the dataset.
+    """
+    def __init__(self, num_samples=1000, data_dir='/Users/rssantanu/Desktop/codebase/scFEA/m171_knockout/knockout_simplified/', gene_list=None, num_genes=100):
+        self.num_samples = num_samples
+        self.data_dir = data_dir
+        self.num_genes= num_genes
+
+        # Read CSV files
+        self.clubbed_data = []
+        for gene in gene_list:
+            gene_data = []
+            for i in range(16):
+                file_path = os.path.join(self.data_dir, gene, 'metabolites', f'd{i}.csv')
+                df = pd.read_csv(file_path, index_col=0)
+                df = df.iloc[:-self.num_genes]
+                gene_data.append(df)
+            self.clubbed_data.append(gene_data)
+        
+        # Generate data
+        self.data = []
+        print("Creating dataset...", flush=True)
+
+        for _ in tqdm(range(num_samples)):
+            times, states = self.sample_expression()
+
+            # Normalize times 
+            times = torch.FloatTensor(times) / 10
+            times = times.unsqueeze(1)
+
+            states = torch.FloatTensor(states)
+            self.data.append((times, states))
+
+    def sample_expression(self):
+        times = []
+        states = []
+
+        considered_gene_dfs = random.choice(self.clubbed_data)
+
+        for t, df in enumerate(considered_gene_dfs):
+            # Sample a random column (cell sample)
+            sampled_cell = df.sample(axis=1).values.squeeze()
+            times.append(t)
+            states.append(sampled_cell)
+        return times, states
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return self.num_samples
+
+class Metabolites_Knockout_Gene_Added(Dataset):
+    """
+    num_samples : int
+        Number of samples of the function contained in the dataset.
+    data_dir : str
+        Directory containing the data files.
+    gene_list : list
+        List of gene folders to include in the dataset.
+    """
+    def __init__(self, num_samples=1000, data_dir='/Users/rssantanu/Desktop/codebase/scFEA/m171_knockout/knockout_simplified/', gene_list=None, num_genes=100):
+        self.num_samples = num_samples
+        self.data_dir = data_dir
+        self.num_genes= num_genes
+
+        # Read CSV files
+        self.clubbed_data = []
+        for gene in gene_list:
+            gene_data = []
+            for i in range(16):
+                file_path = os.path.join(self.data_dir, gene, 'metabolites', f'd{i}.csv')
+                df = pd.read_csv(file_path, index_col=0)
+                gene_data.append(df)
+            self.clubbed_data.append(gene_data)
+        
+        # Generate data
+        self.data = []
+        print("Creating dataset...", flush=True)
+
+        for _ in tqdm(range(num_samples)):
+            times, states = self.sample_expression()
+
+            # Normalize times 
+            times = torch.FloatTensor(times) / 10
+            times = times.unsqueeze(1)
+
+            states = torch.FloatTensor(states)
+            self.data.append((times, states))
+
+    def sample_expression(self):
+        times = []
+        states = []
+
+        considered_gene_dfs = random.choice(self.clubbed_data)
+
+        for t, df in enumerate(considered_gene_dfs):
+            # Sample a random column (cell sample)
+            sampled_cell = df.sample(axis=1).values.squeeze()
+            times.append(t)
+            states.append(sampled_cell)
+        return times, states
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return self.num_samples
+
+
+class Copasi(Dataset):
+    """
+    num_samples : int
+        Number of samples of the function contained in dataset.
+    """
+    def __init__(self, num_samples=1000, data_dir='/Users/rssantanu/Desktop/codebase/neural_process_repo/copasi_data/BIOMD0000000705'):
+
+        self.num_samples = num_samples
+        self.data_dir = data_dir
+        self.time_points = []
+        for i in range(100):
+            file_path = os.path.join(self.data_dir, f'd{i}.csv')
+            df = pd.read_csv(file_path, index_col=0)
+            self.time_points.append(df)
+        
+        # Generate data
+        self.data = []
+        print("Creating dataset...", flush=True)
+
+        for i in tqdm(range(num_samples)):
+            times, states = self.sample_expression(i)
+
+            # Normalize times 
+            times = torch.FloatTensor(times) / 10
+            times = times.unsqueeze(1)
+
+            states = torch.FloatTensor(states)
+            self.data.append((times, states))
+
+        # import pdb; pdb.set_trace()
+
+    def sample_expression(self, i):
+        times = []
+        states = []
+
+        for t, df in enumerate(self.time_points):
+            # Sample a random column (cell sample)
+            sampled_cell = df[f'c_{i}'].values.squeeze()
+            times.append(t)
+            states.append(sampled_cell)
+
+        return times, states
+
+    def __getitem__(self, index):
+        return self.data[index]
+
+    def __len__(self):
+        return self.num_samples
